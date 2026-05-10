@@ -11,14 +11,18 @@ function useProgress() {
   const [starred, setStarred] = useState<Set<number>>(new Set())
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        const data = JSON.parse(raw)
-        setMastered(new Set(data.mastered || []))
-        setStarred(new Set(data.starred || []))
+    queueMicrotask(() => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (raw) {
+          const data = JSON.parse(raw)
+          setMastered(new Set(data.mastered || []))
+          setStarred(new Set(data.starred || []))
+        }
+      } catch {
+        // Ignore corrupted local progress.
       }
-    } catch {}
+    })
   }, [])
 
   const save = useCallback((m: Set<number>, s: Set<number>) => {
@@ -28,7 +32,8 @@ function useProgress() {
   const toggleMastered = useCallback((n: number) => {
     setMastered(prev => {
       const next = new Set(prev)
-      next.has(n) ? next.delete(n) : next.add(n)
+      if (next.has(n)) next.delete(n)
+      else next.add(n)
       setStarred(s => { save(next, s); return s })
       return next
     })
@@ -37,7 +42,8 @@ function useProgress() {
   const toggleStarred = useCallback((n: number) => {
     setStarred(prev => {
       const next = new Set(prev)
-      next.has(n) ? next.delete(n) : next.add(n)
+      if (next.has(n)) next.delete(n)
+      else next.add(n)
       setMastered(m => { save(m, next); return m })
       return next
     })
@@ -108,8 +114,15 @@ export default function Home() {
     return shuffledOrder.map(i => filteredCards[i]).filter(Boolean)
   }, [filteredCards, randomMode, shuffledOrder])
 
-  useEffect(() => { setCurrentIdx(0); setRevealed(false) }, [filterCat, filterMode, search])
-  useEffect(() => { setRevealed(false) }, [currentIdx])
+  useEffect(() => {
+    queueMicrotask(() => {
+      setCurrentIdx(0)
+      setRevealed(false)
+    })
+  }, [filterCat, filterMode, search])
+  useEffect(() => {
+    queueMicrotask(() => setRevealed(false))
+  }, [currentIdx])
 
   const shuffle = () => {
     const arr = Array.from({ length: filteredCards.length }, (_, i) => i)
@@ -149,6 +162,9 @@ export default function Home() {
             <Link href="/we" style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface2)', color: 'var(--text-2)', fontSize: 13, textDecoration: 'none' }}>
               ✍️ WE 写作
             </Link>
+            <Link href="/wfd" style={{ padding: '5px 12px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--accent-light)', color: 'var(--accent)', fontSize: 13, textDecoration: 'none' }}>
+              🎧 WFD 听写
+            </Link>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span style={{ fontSize: 13, color: 'var(--text-2)' }}>
@@ -182,14 +198,14 @@ export default function Home() {
         {tab === 'practice' && (
           <div>
             <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索题目..."
+              <input suppressHydrationWarning value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索题目..."
                 style={{ flex:'1 1 140px', minWidth:120, padding:'8px 12px', borderRadius:'var(--radius-sm)', border:'1px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:14, fontFamily:'DM Sans, sans-serif' }} />
-              <select value={filterCat} onChange={e => setFilterCat(e.target.value as any)}
+              <select suppressHydrationWarning value={filterCat} onChange={e => setFilterCat(e.target.value as Category | '')}
                 style={{ padding:'8px 12px', borderRadius:'var(--radius-sm)', border:'1px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:14, fontFamily:'DM Sans, sans-serif', cursor:'pointer' }}>
                 <option value="">全部分类</option>
                 {(Object.keys(CATEGORY_LABELS) as Category[]).map(k => <option key={k} value={k}>{CATEGORY_LABELS[k]}</option>)}
               </select>
-              <select value={filterMode} onChange={e => setFilterMode(e.target.value as FilterMode)}
+              <select suppressHydrationWarning value={filterMode} onChange={e => setFilterMode(e.target.value as FilterMode)}
                 style={{ padding:'8px 12px', borderRadius:'var(--radius-sm)', border:'1px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:14, fontFamily:'DM Sans, sans-serif', cursor:'pointer' }}>
                 <option value="all">全部</option>
                 <option value="starred">⭐ 收藏</option>
@@ -347,7 +363,7 @@ export default function Home() {
       </main>
 
       <footer style={{ textAlign:'center', padding:'40px 20px', color:'var(--text-3)', fontSize:13, borderTop:'1px solid var(--border)', marginTop:20 }}>
-        飞凡英语 · SST 高频简化版 2026.3 &nbsp;·&nbsp; 61 道核心题目 &nbsp;·&nbsp; litianzeng.cn
+        飞凡英语 · PTE SST / WE / WFD 高频练习 &nbsp;·&nbsp; litianzeng.cn
       </footer>
     </div>
   )
@@ -369,9 +385,9 @@ function ListTab({ mastered, starred, toggleMastered, toggleStarred, onGoTo }: {
   return (
     <div>
       <div style={{ display:'flex', gap:8, marginBottom:14, flexWrap:'wrap' }}>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="搜索..."
+        <input suppressHydrationWarning value={search} onChange={e=>setSearch(e.target.value)} placeholder="搜索..."
           style={{ flex:'1 1 140px', padding:'8px 12px', borderRadius:'var(--radius-sm)', border:'1px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:14, fontFamily:'DM Sans, sans-serif' }} />
-        <select value={catFilter} onChange={e=>setCatFilter(e.target.value as any)}
+        <select suppressHydrationWarning value={catFilter} onChange={e=>setCatFilter(e.target.value as Category | '')}
           style={{ padding:'8px 12px', borderRadius:'var(--radius-sm)', border:'1px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:14, fontFamily:'DM Sans, sans-serif', cursor:'pointer' }}>
           <option value="">全部分类</option>
           {(Object.keys(CATEGORY_LABELS) as Category[]).map(k=><option key={k} value={k}>{CATEGORY_LABELS[k]}</option>)}

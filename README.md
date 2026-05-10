@@ -1,27 +1,59 @@
-# PTE SST 高频题库 · litianzeng.cn
+# PTE 高频题库 · litianzeng.cn
 
-飞凡英语 2026年3月版 · 61道核心题目
+飞凡英语 PTE 学习站，包含：
 
-## 部署步骤
+- SST 高频题库与闪卡练习
+- WE 写作题库与模板练习
+- WFD 每周预测听写练习、Dropbox PDF 自动同步、AI 高清朗读
 
-### 1. 推送到 GitHub
+## 本地开发
+
 ```bash
-git init && git add . && git commit -m "init"
-git remote add origin https://github.com/你的用户名/pte-sst.git
-git push -u origin main
+npm install
+npm run dev
 ```
 
-### 2. Vercel 部署
-- 打开 vercel.com，GitHub 登录
-- New Project → 导入仓库 → Deploy（自动识别 Next.js）
+打开 `http://localhost:3000`。
 
-### 3. 绑定 litianzeng.cn
-在 Vercel Settings → Domains 添加域名，然后在域名注册商添加：
+## WFD 环境变量
 
-| 类型 | 主机记录 | 值 |
-|------|---------|-----|
-| A | @ | 76.76.21.21 |
-| CNAME | www | cname.vercel-dns.com |
+```env
+DROPBOX_SHARED_URL="https://www.dropbox.com/sh/0x7nqk56yq804rz/AABXb6NShiIrqbwptWd_NLnka?dl=0"
+WFD_FOLDER_KEYWORD="周预测"
+CRON_SECRET="replace-with-a-long-random-secret"
+BLOB_READ_WRITE_TOKEN="vercel-blob-read-write-token"
+OPENAI_API_KEY="sk-..."
+PREMIUM_TTS_ENABLED="1"
+OPENAI_TTS_MODEL="gpt-4o-mini-tts"
+OPENAI_TTS_ENGLISH_VOICE="marin"
+OPENAI_TTS_CHINESE_VOICE="coral"
+TTS_BLOB_CACHE="1"
+TTS_RATE_LIMIT_PER_HOUR="900"
+```
 
-### 更新题目
-编辑 `data/cards.ts` → git push → Vercel 自动重新部署
+没有 `OPENAI_API_KEY` 时，WFD 会自动使用浏览器系统语音。没有 `BLOB_READ_WRITE_TOKEN` 时，页面会先使用内置 fallback 数据，`/api/wfd` 仍可尝试实时解析 Dropbox，但 cron 结果不会持久化。
+
+## Vercel Cron
+
+`vercel.json` 中的计划任务：
+
+```json
+{
+  "path": "/api/cron/sync-wfd",
+  "schedule": "0 15 * * 3"
+}
+```
+
+即每周三 23:00（Asia/Shanghai）同步 WFD PDF。
+
+## 部署
+
+```bash
+npx vercel@latest --prod --yes
+```
+
+生产环境需要在 Vercel 项目里配置上面的环境变量。绑定自定义域名后，SST、WE、WFD 将在同一个站点中访问：
+
+- `/`
+- `/we`
+- `/wfd`

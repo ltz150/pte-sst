@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useRef, useEffect } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import Link from 'next/link'
 import {
   weEssays, WE_CATEGORY_LABELS, WE_CATEGORY_COLORS, WE_CATEGORY_BG,
@@ -13,23 +13,31 @@ function useWEProgress() {
   const [mastered, setMastered] = useState<Set<number>>(new Set())
   const [starred, setStarred] = useState<Set<number>>(new Set())
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (raw) {
-        const d = JSON.parse(raw)
-        setMastered(new Set(d.mastered || []))
-        setStarred(new Set(d.starred || []))
+    queueMicrotask(() => {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (raw) {
+          const d = JSON.parse(raw)
+          setMastered(new Set(d.mastered || []))
+          setStarred(new Set(d.starred || []))
+        }
+      } catch {
+        // Ignore corrupted local progress.
       }
-    } catch {}
+    })
   }, [])
   const save = (m: Set<number>, s: Set<number>) =>
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ mastered: [...m], starred: [...s] }))
   const toggleMastered = (n: number) => setMastered(prev => {
-    const next = new Set(prev); next.has(n) ? next.delete(n) : next.add(n)
+    const next = new Set(prev)
+    if (next.has(n)) next.delete(n)
+    else next.add(n)
     setStarred(s => { save(next, s); return s }); return next
   })
   const toggleStarred = (n: number) => setStarred(prev => {
-    const next = new Set(prev); next.has(n) ? next.delete(n) : next.add(n)
+    const next = new Set(prev)
+    if (next.has(n)) next.delete(n)
+    else next.add(n)
     setMastered(m => { save(m, next); return m }); return next
   })
   return { mastered, starred, toggleMastered, toggleStarred }
@@ -82,6 +90,9 @@ export default function WEPage() {
             <Link href="/" style={{ fontSize:13, color:'var(--text-3)', textDecoration:'none', display:'flex', alignItems:'center', gap:4 }}>
               ← SST
             </Link>
+            <Link href="/wfd" style={{ fontSize:13, color:'var(--accent)', textDecoration:'none', display:'flex', alignItems:'center', gap:4 }}>
+              WFD 听写
+            </Link>
             <span style={{ color:'var(--border-strong)' }}>|</span>
             <span style={{ fontFamily:'Fraunces, serif', fontSize:20, fontWeight:400 }}>PTE WE</span>
             <span style={{ fontSize:12, color:'var(--text-3)' }}>2026 写作题库</span>
@@ -119,14 +130,14 @@ export default function WEPage() {
           <div>
             {/* Filters */}
             <div style={{ display:'flex', gap:8, marginBottom:16, flexWrap:'wrap' }}>
-              <input value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索题目、关键词..."
+              <input suppressHydrationWarning value={search} onChange={e => setSearch(e.target.value)} placeholder="搜索题目、关键词..."
                 style={{ flex:'1 1 160px', padding:'8px 12px', borderRadius:'var(--radius-sm)', border:'1px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:14, fontFamily:'DM Sans, sans-serif', outline:'none' }} />
-              <select value={catFilter} onChange={e => setCatFilter(e.target.value as any)}
+              <select suppressHydrationWarning value={catFilter} onChange={e => setCatFilter(e.target.value as WECategory | '')}
                 style={{ padding:'8px 12px', borderRadius:'var(--radius-sm)', border:'1px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:14, cursor:'pointer', outline:'none' }}>
                 <option value="">全部分类</option>
                 {(Object.keys(WE_CATEGORY_LABELS) as WECategory[]).map(k => <option key={k} value={k}>{WE_CATEGORY_LABELS[k]}</option>)}
               </select>
-              <select value={stanceFilter} onChange={e => setStanceFilter(e.target.value as any)}
+              <select suppressHydrationWarning value={stanceFilter} onChange={e => setStanceFilter(e.target.value as StanceType | '')}
                 style={{ padding:'8px 12px', borderRadius:'var(--radius-sm)', border:'1px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:14, cursor:'pointer', outline:'none' }}>
                 <option value="">全部立场</option>
                 {(Object.keys(WE_STANCE_LABELS) as StanceType[]).map(k => <option key={k} value={k}>{WE_STANCE_LABELS[k]}</option>)}
@@ -260,7 +271,7 @@ function CardView({ essays, initial, mastered, starred, toggleMastered, toggleSt
           </div>
 
           {/* Logic diagram */}
-          <LogicDiagram essay={e} catColor={catColor} catBg={catBg} />
+          <LogicDiagram essay={e} catColor={catColor} />
 
           {/* Body 1 */}
           <div style={{ marginTop:16 }}>
@@ -336,7 +347,7 @@ function CardView({ essays, initial, mastered, starred, toggleMastered, toggleSt
 }
 
 /* ─── Logic Diagram (like the image) ─── */
-function LogicDiagram({ essay, catColor, catBg }: { essay: WEEssay, catColor: string, catBg: string }) {
+function LogicDiagram({ essay, catColor }: { essay: WEEssay, catColor: string }) {
   return (
     <div style={{ marginTop:8 }}>
       <div style={{ fontSize:11, fontWeight:500, color:'var(--text-3)', letterSpacing:'0.08em', marginBottom:10 }}>逻辑导图</div>

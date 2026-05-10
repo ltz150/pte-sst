@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/sync-wfd",
+      "schedule": "0 15 * * 3"
+    }
+  ]
+}
