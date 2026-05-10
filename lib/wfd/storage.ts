@@ -26,10 +26,7 @@ export async function readLatestWfdData(options: ReadLatestWfdDataOptions = {}) 
   }
 
   try {
-    const result = await get(LATEST_JSON_PATH, {
-      access: "public",
-      useCache: false,
-    });
+    const result = await get(LATEST_JSON_PATH, { access: "public" });
 
     if (!result || result.statusCode !== 200 || !result.stream) {
       return allowBootstrap ? bootstrapWfdData : emptyWfdData;

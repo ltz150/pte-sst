@@ -22,7 +22,7 @@ export async function extractPdfText(data: Uint8Array) {
   const PDFParse = await loadPdfRuntime();
   const parser = new PDFParse({
     CanvasFactory,
-    data,
+    data: new Uint8Array(data),
     isImageDecoderSupported: false,
     isOffscreenCanvasSupported: false,
     useWorkerFetch: false,
