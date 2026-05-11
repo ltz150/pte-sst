@@ -264,7 +264,7 @@ export function WfdPlayer({ dataset: initialDataset }: { dataset: WfdDataset }) 
           if (result.fellBackToSystem) {
             modeForRun = "system";
             setTtsMode("system");
-            setTtsNotice("AI 高清语音暂不可用，已自动切换到系统免费语音。");
+            setTtsNotice(result.reason || "AI 高清语音暂不可用，已自动切换到系统免费语音。");
           }
         }
 
@@ -1622,7 +1622,7 @@ async function playSpeechPart(
       });
 
       return { fellBackToSystem: false };
-    } catch {
+    } catch (error) {
       await speakSystemPart(part, {
         chineseVoice,
         englishVoice,
@@ -1630,7 +1630,13 @@ async function playSpeechPart(
         rate,
       });
 
-      return { fellBackToSystem: true };
+      return {
+        fellBackToSystem: true,
+        reason:
+          error instanceof Error
+            ? error.message
+            : "AI 高清语音暂不可用，已自动切换到系统免费语音。",
+      };
     }
   }
 
@@ -1712,7 +1718,7 @@ async function getPremiumAudioUrl(part: SpeechPart, rate: number, audioCache: Ma
   });
 
   if (!response.ok || !response.headers.get("content-type")?.includes("audio")) {
-    throw new Error("Premium TTS is unavailable.");
+    throw new Error(await getPremiumAudioErrorMessage(response));
   }
 
   const blob = await response.blob();
@@ -1720,6 +1726,29 @@ async function getPremiumAudioUrl(part: SpeechPart, rate: number, audioCache: Ma
   audioCache.set(cacheKey, url);
 
   return url;
+}
+
+async function getPremiumAudioErrorMessage(response: Response) {
+  try {
+    const payload = (await response.json()) as {
+      code?: string | null;
+      detail?: string;
+      error?: string;
+      message?: string | null;
+    };
+
+    if (payload.code === "insufficient_quota" || payload.detail?.includes("insufficient_quota")) {
+      return "OpenAI API 额度不足，已自动切换到系统免费语音。充值 API 额度后会自动恢复 AI 高清朗读。";
+    }
+
+    if (payload.error === "Premium TTS is temporarily rate limited.") {
+      return "AI 高清语音请求过于频繁，已自动切换到系统免费语音。稍后可再试。";
+    }
+  } catch {
+    // Fall through to the generic message below.
+  }
+
+  return "AI 高清语音暂不可用，已自动切换到系统免费语音。";
 }
 
 function speakSystemPart(

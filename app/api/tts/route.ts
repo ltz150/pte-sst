@@ -107,11 +107,14 @@ export async function POST(request: Request) {
 
   if (!response.ok) {
     const detail = await response.text();
+    const openAiError = parseOpenAiError(detail);
 
     return Response.json(
       {
         ok: false,
         error: "Premium TTS request failed.",
+        code: openAiError.code,
+        message: openAiError.message,
         detail: detail.slice(0, 500),
       },
       { status: 200 },
@@ -122,6 +125,19 @@ export async function POST(request: Request) {
   await writeCachedAudio(cacheKey, audio);
 
   return audioResponse(audio, "openai", rateLimit);
+}
+
+function parseOpenAiError(detail: string) {
+  try {
+    const parsed = JSON.parse(detail) as { error?: { code?: string; message?: string } };
+
+    return {
+      code: parsed.error?.code || null,
+      message: parsed.error?.message || null,
+    };
+  } catch {
+    return { code: null, message: null };
+  }
 }
 
 function sanitizeText(value: unknown) {
