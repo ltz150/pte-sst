@@ -162,7 +162,7 @@ async function synthesizeWithMiniMax(text: string, options: SpeechOptions): Prom
     };
   }
 
-  const response = await fetch(process.env.MINIMAX_TTS_URL || MINIMAX_SPEECH_URL, {
+  const response = await fetch(getMiniMaxSpeechUrl(), {
     method: "POST",
     headers: {
       Authorization: `Bearer ${process.env.MINIMAX_API_KEY}`,
@@ -223,6 +223,17 @@ async function synthesizeWithMiniMax(text: string, options: SpeechOptions): Prom
       detail,
     };
   }
+}
+
+function getMiniMaxSpeechUrl() {
+  const url = new URL(process.env.MINIMAX_TTS_URL || MINIMAX_SPEECH_URL);
+  const groupId = process.env.MINIMAX_GROUP_ID?.trim();
+
+  if (groupId) {
+    url.searchParams.set("GroupId", groupId);
+  }
+
+  return url.toString();
 }
 
 async function synthesizeWithOpenAi(text: string, options: SpeechOptions): Promise<SynthesisResult> {

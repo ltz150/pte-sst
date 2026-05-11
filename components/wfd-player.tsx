@@ -1735,10 +1735,18 @@ async function getPremiumAudioErrorMessage(response: Response) {
       detail?: string;
       error?: string;
       message?: string | null;
+      provider?: string;
     };
 
     if (payload.code === "insufficient_quota" || payload.detail?.includes("insufficient_quota")) {
       return "OpenAI API 额度不足，已自动切换到系统免费语音。充值 API 额度后会自动恢复 AI 高清朗读。";
+    }
+
+    if (
+      payload.provider === "minimax" &&
+      (payload.code === "2049" || payload.message?.toLowerCase().includes("invalid api key"))
+    ) {
+      return "MiniMax API key 无效或不适用于 TTS，已自动切换到系统免费语音。请在 MiniMax API Platform 创建可用于 Speech/TTS 的密钥。";
     }
 
     if (payload.error === "Premium TTS is temporarily rate limited.") {
